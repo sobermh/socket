@@ -6,11 +6,12 @@
 
 from socket import *
 
-IP = '192.168.30.43'
-SERVER_PORT = 13333
+#服务端ip和端口
+IP = '127.0.0.1'
+SERVER_PORT = 3333
 BUFLEN = 1024
 
-# 实例化一个socket对象，指明协议
+# 实例化一个socket对象，指明协议，ip/tcp
 dataSocket = socket(AF_INET, SOCK_STREAM)
 
 # 连接服务端socket
@@ -29,7 +30,7 @@ while True:
     # 如果返回空bytes，表示对方关闭了连接
     if not recved:
         break
-    # 打印读取的信息
+    # # 打印读取的信息
     print(recved.decode())
 
 dataSocket.close()
