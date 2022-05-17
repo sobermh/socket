@@ -3,7 +3,6 @@
 @time:2022/5/10 11:37
 """
 
-#  === TCP 服务端程序 tcp_server.py ===
 
 # 导入socket 库
 from socket import *
