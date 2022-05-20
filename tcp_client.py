@@ -20,7 +20,7 @@ BUFLEN = 1024
 
 # #####客户端绑定
 # ip1='192.168.30.43'
-# client_port=10000
+# client_port=24640
 # tcpc_Socket.bind((ip1,client_port))
 
 
@@ -35,7 +35,7 @@ while True:
     if  toSend =='exit':
         break
     # 发送消息，也要编码为 bytes
-    tcpc_Socket.send(toSend.encode())
+    tcpc_Socket.send(toSend.encode('ascii'))
     # 等待接收服务端的消息
     recved = tcpc_Socket.recv(BUFLEN)
     #ewqe 如果返回空bytes，表示对方关闭了连接

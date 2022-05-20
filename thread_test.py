@@ -21,6 +21,8 @@ def dance():
         time.sleep(1)
 
 
+
+
 def main():
     #创建实例对象
     t1 = threading.Thread(target=sing)
