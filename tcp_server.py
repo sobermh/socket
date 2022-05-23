@@ -4,6 +4,7 @@
 """
 
 # 导入socket 库
+from threading import Thread
 from socket import *
 import pymysql
 import datetime
@@ -12,8 +13,10 @@ import datetime
 def R_chx(chx,rx):
     voltage_data=1.65 + (chx * 3.0 / 65535 - 1.65) / 2.8
     # 芯片电阻和芯片分压的对应关系
-    R_ch1 = (3.3 - voltage_data) * rx / voltage_data
-    return R_ch1
+    chx_r = (3.3 - voltage_data) * rx / voltage_data
+    # round(chx_r, 2)保留两位小数位
+    # 保留八位有效位数
+    return float(format(chx_r, '.8g'))
 
 # 1.创建套接字
 # 实例化一个socket对象
@@ -42,81 +45,105 @@ print(f'服务端启动成功，在{PORT}端口等待客户端连接...')
 # netstat -an|find /i "13333"cmd查看13333端口号服务
 # 连接成功的话，有三个，一个是监听，两个是建立连接的客户端和服务端
 # global info  # 声明全局变量，将数据传入到flask中
-while True:
-
-    # 4.等待客户端的连接
-    # 接受客户端的数据,处于堵塞状态
-    # (监听套接字负责等待新的客户端进行连接)
-    # （accept）产生的新的套接字用来为客户端服务
-    dataSocket, client_addr = listenSocket.accept()
-
-    # 连接数据库()
-    conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', passwd="123456", charset='utf8', db='users')
-    cursor = conn.cursor(cursor=pymysql.cursors.DictCursor)
-    print('接受一个客户端连接:', client_addr)
-    t1 = datetime.datetime.today()# 获取现在时间
-    print(t1)
+def clientHandler(dataSocket,client_addr):
     while True:
-        try:
-            # 尝试读取对方发送的消息
-            # BUFLEN 指定从接收缓冲里最多读取多少字节，默认堵塞
-            recved = dataSocket.recv(BUFLEN)
-            # 如果返回空bytes，表示对方关闭了连接（客户端调用close那么recv（）就会阻塞）
-            # 退出循环，结束消息收发
-            if not recved:
-                print(f"{client_addr}断开连接")
-                break
-            # 客户端发送的信息是什么类型的数据，就怎么解码，不一定都是utf8的字符串
-            # 读取的字节数据是bytes类型，需要解码为字符串,2->10->16
-            info = recved#解码，去除b’‘
-            print(f'收到对方信息： {info}')
-            #包左不包右
-            CH1 =info[1:3]
-            print(type(CH1))
-            print(CH1.decode('int'))
-            # r1 =info[18:22]
-            # x=bin(int(r1, 2))
-            # CH11 = R_chx(int(CH1),int(r1))
-            CH2 =info[4:6]
-            # r2 = info[22:26]
-            # CH22 =R_chx(int(CH1), int(r2))
-            CH3 =info[6:8]
-            # r3 = info[26:30]
-            # CH33=R_chx(int(CH1), int(r3))
-            CH4 =info[8:10]
-            # r4 = info[30:34]
-            # CH44=R_chx(int(CH1), int(r4))
-            CH5 =info[10:12]
-            # r5 = info[34:38]
-            # CH55=R_chx(int(CH1), int(r5))
-            CH6 =info[12:14]
-            # r6 = info[38:42]
-            # CH66=R_chx(int(CH1), int(r6))
-            CH7 =info[14:16]
-            # r7 = info[42:46]
-            # CH77=R_chx(int(CH1), int(r7))
-            CH8 =info[16:18]
-            # r8 = info[46:50]
-            # CH88=R_chx(int(CH1), int(r8))
-            # print(CH1)
-            # print(info2[0])
-            # info16=hex(int(info2,2))
-        #处理客户端不正常断开
-        except ConnectionResetError as e:
-            print(f"{client_addr}不正常断开连接")
-            break
-        #将数据存入数据库
-        # sql="insert into data(ip,port,data,connect_time,CH1,CH2,CH3,CH4,CH5,CH6,CH7,CH8) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
-        # cursor.execute(sql,[client_addr[0],client_addr[1],info,t1,CH1,CH2,CH3,CH4,CH5,CH6,CH7,CH8])
-        # conn.commit()
+            # 连接数据库()
+            conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', passwd="123456", charset='utf8', db='users')
+            cursor = conn.cursor(cursor=pymysql.cursors.DictCursor)
+            t1 = datetime.datetime.today()# 获取现在时间
+            print(t1)
+            while True:
+                try:
+                    # 尝试读取对方发送的消息
+                    # BUFLEN 指定从接收缓冲里最多读取多少字节，默认堵塞
+
+                    recved = dataSocket.recv(BUFLEN)
+                    t2=datetime.datetime.today()
+                    # 如果返回空bytes，表示对方关闭了连接（客户端调用close那么recv（）就会阻塞）
+                    # 退出循环，结束消息收发
+                    if not recved:
+                        print(f"{client_addr}断开连接")
+                        break
+                    # 客户端发送的信息是什么类型的数据，就怎么解码，不一定都是utf8的字符串
+                    # 读取的字节数据是bytes类型，需要解码为字符串,2->10->16
+                    info = recved#解码，去除b’‘
+                    print(f'收到对方信息： {info}')
+                    #包左不包右
+                    CH1 =info[2:4]
+                    #bytes转化为int
+                    ch1_int=int.from_bytes(CH1, byteorder='big', signed=False)
+                    r1 =info[18:22]
+                    r1_int=int.from_bytes(r1, byteorder='big', signed=False)
+                    ch1_r1 = R_chx(ch1_int,r1_int)
+
+                    CH2 =info[4:6]
+                    ch2_int = int.from_bytes(CH2, byteorder='big', signed=False)
+                    r2 = info[22:26]
+                    r2_int = int.from_bytes(r2, byteorder='big', signed=False)
+                    ch2_r2 = R_chx(ch2_int,r2_int)
+
+                    CH3 =info[6:8]
+                    ch3_int = int.from_bytes(CH3, byteorder='big', signed=False)
+                    r3 = info[26:30]
+                    r3_int = int.from_bytes(r3, byteorder='big', signed=False)
+                    ch3_r3 = R_chx(ch3_int,r3_int)
+
+                    CH4 =info[8:10]
+                    ch4_int = int.from_bytes(CH4, byteorder='big', signed=False)
+                    r4 = info[30:34]
+                    r4_int = int.from_bytes(r4, byteorder='big', signed=False)
+                    ch4_r4 = R_chx(ch4_int,r4_int)
+
+                    CH5 =info[10:12]
+                    ch5_int = int.from_bytes(CH5, byteorder='big', signed=False)
+                    r5 = info[34:38]
+                    r5_int = int.from_bytes(r5, byteorder='big', signed=False)
+                    ch5_r5 = R_chx(ch5_int,r5_int)
+
+                    CH6 =info[12:14]
+                    ch6_int = int.from_bytes(CH6, byteorder='big', signed=False)
+                    r6 = info[38:42]
+                    r6_int = int.from_bytes(r6, byteorder='big', signed=False)
+                    ch6_r6 = R_chx(ch6_int,r6_int)
+
+                    CH7 =info[14:16]
+                    ch7_int = int.from_bytes(CH7, byteorder='big', signed=False)
+                    r7 = info[42:46]
+                    r7_int = int.from_bytes(r7, byteorder='big', signed=False)
+                    ch7_r7 = R_chx(ch7_int,r7_int)
+
+                    CH8 =info[16:18]
+                    ch8_int = int.from_bytes(CH8, byteorder='big', signed=False)
+                    r8 = info[46:50]
+                    r8_int = int.from_bytes(r8, byteorder='big', signed=False)
+                    ch8_r7 = R_chx(ch8_int,r8_int)
+                #处理客户端不正常断开
+                except ConnectionResetError as e:
+                    print(f"{client_addr}不正常断开连接")
+                    break
+                # 将数据存入数据库
+                sql="insert into data(ip,port,times,connect_time,CH1,CH2,CH3,CH4,CH5,CH6,CH7,CH8) values(%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                cursor.execute(sql,[client_addr[0],client_addr[1],(t2-t1).total_seconds(),t1,ch1_r1,ch2_r2,ch3_r3,ch4_r4,ch5_r5,ch6_r6,ch7_r7,ch8_r7])
+                conn.commit()
 
 
-        # 回收客户端数据
-        # 服务器接收到之后，告诉客户端接到了，发送的数据类型必须是bytes，所以要编码
-        dataSocket.send(f'服务端接收到了信息 {info}'.encode())
-    dataSocket.close()  # 表示关闭为一个客户端的服务，accept（）会继续服务
-    cursor.close()
-    conn.close()
+                # 回收客户端数据
+                # 服务器接收到之后，告诉客户端接到了，发送的数据类型必须是bytes，所以要编码
+                dataSocket.send(f'服务端接收到了信息 {info}'.encode())
+            dataSocket.close()  # 表示关闭为一个客户端的服务，accept（）会继续服务
+            cursor.close()
+            conn.close()
+
+# 4.等待客户端的连接
+# 接受客户端的数据,处于堵塞状态
+# (监听套接字负责等待新的客户端进行连接)
+# （accept）产生的新的套接字用来为客户端服务
+while True:
+    dataSocket, client_addr = listenSocket.accept()
+    print('接受一个客户端连接:', client_addr)
+    #创建新线程处理这个客户端得消息得收发
+    th=Thread(target=clientHandler,args=(dataSocket,client_addr))
+    th.start()
 # 6.关闭套接字
 # 服务端也调用close()关闭socket
 listenSocket.close()  # 表示关闭一个服务器的服务，accept（）停止服务
