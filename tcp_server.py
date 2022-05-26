@@ -52,16 +52,24 @@ def clientHandler(dataSocket,client_addr):
             cursor = conn.cursor(cursor=pymysql.cursors.DictCursor)
             t1 = datetime.datetime.today()# 获取现在时间
             print(t1)
+            count=1
             while True:
                 try:
                     # 尝试读取对方发送的消息
                     # BUFLEN 指定从接收缓冲里最多读取多少字节，默认堵塞
-
                     recved = dataSocket.recv(BUFLEN)
                     t2=datetime.datetime.today()
+                    if count==1:
+                        sql = "insert into status(status,ip,port,connect_time) values(%s,%s,%s,%s)"
+                        cursor.execute(sql, ["接收到连接数据",client_addr[0],client_addr[1],t2])
+                        conn.commit()
+                    count+=1
                     # 如果返回空bytes，表示对方关闭了连接（客户端调用close那么recv（）就会阻塞）
                     # 退出循环，结束消息收发
                     if not recved:
+                        t3 = datetime.datetime.today()
+                        sql = "insert into status(status,ip,port,connect_time) values(%s,%s,%s,%s)"
+                        cursor.execute(sql, ["客户端断开连接", client_addr[0], client_addr[1], t3])
                         print(f"{client_addr}断开连接")
                         break
                     # 客户端发送的信息是什么类型的数据，就怎么解码，不一定都是utf8的字符串
@@ -119,6 +127,9 @@ def clientHandler(dataSocket,client_addr):
                     ch8_r7 = R_chx(ch8_int,r8_int)
                 #处理客户端不正常断开
                 except ConnectionResetError as e:
+                    t4 = datetime.datetime.today()
+                    sql = "insert into status(status,ip,port,connect_time) values(%s,%s,%s,%s)"
+                    cursor.execute(sql, ["客户端不正常断开连接", client_addr[0], client_addr[1], t4])
                     print(f"{client_addr}不正常断开连接")
                     break
                 # 将数据存入数据库
@@ -133,7 +144,7 @@ def clientHandler(dataSocket,client_addr):
             dataSocket.close()  # 表示关闭为一个客户端的服务，accept（）会继续服务
             cursor.close()
             conn.close()
-
+            break
 # 4.等待客户端的连接
 # 接受客户端的数据,处于堵塞状态
 # (监听套接字负责等待新的客户端进行连接)
@@ -141,7 +152,7 @@ def clientHandler(dataSocket,client_addr):
 while True:
     dataSocket, client_addr = listenSocket.accept()
     print('接受一个客户端连接:', client_addr)
-    #创建新线程处理这个客户端得消息得收发
+    # 创建新线程处理这个客户端得消息得收发
     th=Thread(target=clientHandler,args=(dataSocket,client_addr))
     th.start()
 # 6.关闭套接字
