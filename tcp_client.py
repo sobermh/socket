@@ -2,8 +2,7 @@
 @author:maohui
 @time:2022/5/10 11:49
 """
-
-
+import time
 from socket import *
 
 
@@ -27,7 +26,7 @@ BUFLEN = 1024
 # 连接服务端socket
 tcpc_Socket.connect((IP, SERVER_PORT))
 
-
+print(1)
 #3.发送数据
 while True:
     # 从终端读入用户输入的字符串
@@ -35,14 +34,17 @@ while True:
     # if  toSend =='exit':
     #     break
     # 发送消息，也要编码为 bytes
+
     tcpc_Socket.send('111111111111111111111111111111111111111111111112'.encode('ascii'))
+    time.sleep(0.5)
+    print(1)
     # 等待接收服务端的消息
-    recved = tcpc_Socket.recv(BUFLEN)
-    #ewqe 如果返回空bytes，表示对方关闭了连接
-    if not recved:
-        break
-    # # 打印读取的信息
-    print(recved.decode())
+    # recved = tcpc_Socket.recv(BUFLEN)
+    # #ewqe 如果返回空bytes，表示对方关闭了连接
+    # if not recved:
+    #     break
+    # # # 打印读取的信息
+    # print(recved.decode())
 
 #4.关闭套接字
 tcpc_Socket.close()
