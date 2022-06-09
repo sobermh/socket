@@ -14,12 +14,11 @@ import datetime
 from smtplib import SMTP_SSL  # 加密及发送邮件内容
 from email.mime.application import MIMEApplication  # 添加附件
 from email.mime.multipart import MIMEMultipart  # 邮件的主体
-#ADC输出的数据和芯片分压的对应关系
 from pymysql import cursors
 
 
 def R_chx(chx,rx):
-    """对socket接收到的数据进行公式计算分析"""
+    """对socket接收到的数据进行公式计算分析，ADC输出的数据和芯片分压的对应关系"""
     voltage_data=1.65 + (chx * 3.0 / 65535 - 1.65) / 2.8
     # 芯片电阻和芯片分压的对应关系
     chx_r = (3.3 - voltage_data) * rx / voltage_data
@@ -136,8 +135,8 @@ def clientHandler(dataSocket,client_addr):
                     # 退出循环，结束消息收发
                     if not recved:
                         t_close = datetime.datetime.today()
-                        sql = "insert into status(status,ip,port,close_time) values(%s,%s,%s,%s)"
-                        cursor.execute(sql, ["客户端断开连接", client_addr[0], client_addr[1], t_close])
+                        # sql = "insert into status(status,ip,port,close_time) values(%s,%s,%s,%s)"
+                        # cursor.execute(sql, ["客户端断开连接", client_addr[0], client_addr[1], t_close])
                         print(f"{client_addr}断开连接")
                         break
                     # 客户端发送的信息是什么类型的数据，就怎么解码，不一定都是utf8的字符串
