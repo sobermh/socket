@@ -62,7 +62,7 @@ def data_send_email(file_path):
     print(authcodes)
     # 输入SMTP服务器地址
     smtp_server = "smtp.exmail.qq.com"
-    #收件人
+    #收件人，
     to_addr="409788696@qq.com"
     #附件,添加一个头部使发送的不为.bin
     fujian=MIMEApplication(open(file_path,'rb').read())
