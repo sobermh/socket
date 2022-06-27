@@ -38,7 +38,8 @@ listenSocket.ioctl(SIO_KEEPALIVE_VALS, (1, 3600 * 1000, 1800 * 1000))
 # 2.绑定本地信息blid
 # 主机地址为空字符串，表示绑定本机所有网络接口ip地址
 # 等待客户端来连接
-IP = gethostbyname(gethostname())
+# IP = gethostbyname(gethostname())
+IP = "192.168.3.26"
 # 端口号 9999
 PORT = 9999
 # 定义一次从socket缓冲区最多读入512个字节数据
@@ -85,15 +86,15 @@ def sql_to_excel():
                 t_server_begin = datetime.date.today()  # 获取没有时间的日期
                 conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', passwd="123456", charset='utf8', db='users')
                 cursor = conn.cursor(cursor=pymysql.cursors.DictCursor)
-                sql = f"select * from data into outfile 'c:/data/{t_server_begin}.xlsx'"
+                sql = f"select * from data into outfile 'c:/data/{t_server_begin}.xls'"
                 # f"select * from data into outfile 'c:/data/{t_server_begin}.xlsx'"
                 cursor.execute(sql,)
                 conn.commit()
                 sql = "truncate table data"
                 cursor.execute(sql,)
                 conn.commit()
-                #调用发送邮件函数发送
-                file_path='c:\data\\'+str(t_server_begin)+'.xlsx'
+                #调用发送邮件函数发送,office的xls
+                file_path='c:\data\\'+str(t_server_begin)+'.xls'
                 data_send_email(file_path)
                 # 604800
                 time.sleep(604800)
