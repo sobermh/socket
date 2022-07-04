@@ -12,7 +12,8 @@ tcpc_Socket = socket(AF_INET, SOCK_STREAM)
 
 #2.链接服务器
 #服务端ip和端口
-IP = '192.168.30.43'
+# IP = '192.168.30.43'
+IP = gethostbyname(gethostname())
 SERVER_PORT = 9999
 BUFLEN = 1024
 

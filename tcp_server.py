@@ -4,9 +4,11 @@
 """
 
 # 导入socket 库
+import os
 import re
 import socket
 import time
+import zipfile
 from threading import Thread
 from socket import *
 import pymysql
@@ -38,8 +40,8 @@ listenSocket.ioctl(SIO_KEEPALIVE_VALS, (1, 3600 * 1000, 1800 * 1000))
 # 2.绑定本地信息blid
 # 主机地址为空字符串，表示绑定本机所有网络接口ip地址
 # 等待客户端来连接
-# IP = gethostbyname(gethostname())
-IP = "192.168.3.26"
+IP = gethostbyname(gethostname())
+# IP = "192.168.3.26"
 # 端口号 9999
 PORT = 9999
 # 定义一次从socket缓冲区最多读入512个字节数据
@@ -53,51 +55,91 @@ listenSocket.bind((IP, PORT))
 listenSocket.listen(128)
 print(f'服务端启动成功，在{PORT}端口等待客户端连接...')
 
-def data_send_email(file_path):
-    """将数据发生到指定邮箱"""
+def zip_file(file_create_time):
+    """压缩文件夹，生成新的压缩文件"""
+    file_name=str(file_create_time)
+    start_dir = f'c:/data/{file_name}' # 要压缩的文件夹路径
+    file_news = start_dir + '.zip'  # 压缩后文件夹的名字
+    z = zipfile.ZipFile(file_news, 'w', zipfile.ZIP_DEFLATED)
+    for dir_path, dir_names, file_names in os.walk(start_dir):
+        f_path = dir_path.replace(start_dir, '')  # 这一句很重要，不replace的话，就从根目录开始复制
+        f_path = f_path and f_path + os.sep or ''  # 实现当前文件夹以及包含的所有文件的压缩
+        for filename in file_names:
+            z.write(os.path.join(dir_path, filename), f_path + filename)
+    z.close()
+    return file_news
+
+file_create_time=datetime.date.today() # 没有时分秒
+# file_create_time = datetime.datetime.today()  # 完整时间
+folder_path=""
+def create_file_time(file_create_time,folder_path):
+    """5天创建一个文件夹"""
+    while True:
+        try:
+            file_name=str(file_create_time)
+            folder_path = f'c:/data/{file_name}'
+            os.makedirs(folder_path)
+            # 5天
+            time.sleep(432000)
+            file_create_time = datetime.datetime.today()
+        except Exception as e:
+            t_error = datetime.datetime.today()  # 获取现在时间
+            with open("./log.txt", "w") as f:
+                f.write(f"time={t_error},e={e},---------------------")
+            time.sleep(86400)
+
+
+def data_send_email(file_create_time):
+    """5天一次,将数据发生到指定邮箱"""
     #发送人
-    from_addr="maohui@well-healthcare.com"
-    with open("./python-authcodes.txt",mode='r',encoding="utf-8") as file:
-        authcodes=file.read()
-    print(authcodes)
-    # 输入SMTP服务器地址
-    smtp_server = "smtp.exmail.qq.com"
-    #收件人，
-    to_addr="409788696@qq.com"
-    #附件,添加一个头部使发送的不为.bin
-    fujian=MIMEApplication(open(file_path,'rb').read())
-    fujian.add_header('Content-Disposition', 'attachment', filename=re.search(r"[\d]+.*",file_path).group())
-    print(re.search(r"[\d]+.*",file_path).group())
-    #初始化邮件
-    msg=MIMEMultipart()#初始化主体
-    msg['Subject'] = re.search(r"[\d]+.*",file_path).group() # 放入标题
-    msg.attach(fujian) #放入附件
-    #发送
-    smtp=SMTP_SSL(smtp_server,465) # 连接发送的邮箱服务器
-    smtp.login(from_addr,authcodes)# 登录发送的邮箱
-    smtp.sendmail(from_addr, to_addr, msg.as_string())
-def sql_to_excel():
+    while True:
+        from_addr="maohui@well-healthcare.com"
+        with open("./python-authcodes.txt",mode='r',encoding="utf-8") as file:
+            authcodes=file.read()
+        print(authcodes)
+        # 输入SMTP服务器地址
+        smtp_server = "smtp.exmail.qq.com"
+        #收件人，
+        to_addr="nipengyun@well-healthcare.com"
+        #附件,添加一个头部使发送的不为.bin
+        fujian=MIMEApplication(open(zip_file(file_create_time),'rb').read())
+        fujian.add_header('Content-Disposition', 'attachment', filename=re.search(r"[\d]+.*",zip_file(file_create_time)).group())
+        print(re.search(r"[\d]+.*",zip_file(file_create_time)).group())
+        #初始化邮件
+        msg=MIMEMultipart()#初始化主体
+        msg['Subject'] = re.search(r"[\d]+.*",zip_file(file_create_time)).group() # 放入标题
+        msg.attach(fujian) #放入附件
+        #发送
+        smtp=SMTP_SSL(smtp_server,465) # 连接发送的邮箱服务器
+        smtp.login(from_addr,authcodes)# 登录发送的邮箱
+        smtp.sendmail(from_addr, to_addr, msg.as_string())
+        #5天
+        time.sleep(432000)
+def sql_to_excel(file_create_time):
         """一周导出一次数据库数据，并清空数据库,重新赋值时间戳，发送至邮箱。。。"""
         # 设置时间线，以其为标准，对数据库进行导出清空
         while True:
             try:
                 # t_server_begin = datetime.datetime.today()
                 # t_server_begin1=datetime.date.today()-datetime.timedelta(days=3)
-                t_server_begin = datetime.date.today()  # 获取没有时间的日期
+                t_server_begin = datetime.date.today()  # 获取当前没有时间的日期
                 conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', passwd="123456", charset='utf8', db='users')
                 cursor = conn.cursor(cursor=pymysql.cursors.DictCursor)
-                sql = f"select * from data into outfile 'c:/data/{t_server_begin}.xls'"
+                file_name=str(file_create_time)
+                print(file_name)
+                print(f'c:/data/{file_name}/{t_server_begin}.xls')
+                sql = f"select * from data into outfile 'c:/data/{file_name}/{t_server_begin}.xls'"
                 # f"select * from data into outfile 'c:/data/{t_server_begin}.xlsx'"
                 cursor.execute(sql,)
                 conn.commit()
                 sql = "truncate table data"
                 cursor.execute(sql,)
                 conn.commit()
-                #调用发送邮件函数发送,office的xls
-                file_path='c:\data\\'+str(t_server_begin)+'.xls'
-                data_send_email(file_path)
-                # 604800
-                time.sleep(604800)
+                # #调用发送邮件函数发送,office的xls
+                # file_path=folder_path+'/'+str(t_server_begin)+'.xls'
+                # data_send_email(file_path)
+                #一天
+                time.sleep(86400)
             except Exception as e:
                 t_error = datetime.datetime.today()  # 获取现在时间
                 with open("./log.txt", "w") as f:
@@ -233,9 +275,18 @@ while True:
     print('接受一个客户端连接:', client_addr)
     # 创建新线程处理这个客户端得消息得收发
     th1=Thread(target=clientHandler,args=(dataSocket,client_addr))
-    th2=Thread(target=sql_to_excel)
+    th2=Thread(target=sql_to_excel,args=(file_create_time,))
+    th3 = Thread(target=create_file_time,args=(file_create_time,folder_path))
+    th4 = Thread(target= data_send_email,args=(file_create_time,))
+    th3.start()
+    time.sleep(3)
     th1.start()
     th2.start()
+    th4.start()
 # 6.关闭套接字
 # 服务端也调用close()关闭socket
 listenSocket.close()  # 表示关闭一个服务器的服务，accept（）停止服务
+## 其实我们使用Pyinstaller 打包时可以增加 -w 参数来取消cmd弹窗，即后台控制台
+# pyinstaller -F -w filename.py
+# 打包完成后，会生成2个文件夹，bulid 和 dist , 其中dist中存放着我们需要的 exe 程序
+# 同时在当前路径下，还会生成一个同名的 .spec文件
